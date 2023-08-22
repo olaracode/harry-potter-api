@@ -2,7 +2,15 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+# IMPORTANTE: Cada vez que modifiquemos los datos de una clase
+# o Creemos una clase
+# Tenemos que correr las migraciones de la base de datos
+# pipenv run migrate -> Oye mira estos modelos
+# pipenv run upgrade -> Actualizate con estas tablas
+
+
 class User(db.Model):
+    __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(80), unique=False, nullable=False)
@@ -16,4 +24,33 @@ class User(db.Model):
             "id": self.id,
             "email": self.email,
             # do not serialize the password, its a security breach
+        }
+
+# Quiero crear una clase Personaje, Escuela, Pelicula, Libro
+
+
+class Character(db.Model):
+    __tablename__ = "character"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    gender = db.Column(db.String(20), unique=False, nullable=False)
+    species = db.Column(db.String(40), unique=False, nullable=False)
+    is_alive = db.Column(db.Boolean, unique=False, nullable=False)
+
+    # class -> __repr__ harry =- Character()
+    # print(harry) -> <object #A984351ajsdfg >
+    # harry.serialize() -> { "id": 1, name: "Harry Potter", "gender": "male",
+    #  "is_alive": True }
+    def __repr__(self):
+        # `Character ${variable}`
+        # Personaje:
+        return f'Character {self.name}'
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "gender": self.gender,
+            "species": self.species,
+            "is_alive": self.is_alive
         }
