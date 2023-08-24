@@ -36,14 +36,11 @@ class Character(db.Model):
     gender = db.Column(db.String(20), unique=False, nullable=False)
     species = db.Column(db.String(40), unique=False, nullable=False)
     is_alive = db.Column(db.Boolean, unique=False, nullable=False)
+    house_id = db.Column(db.Integer, db.ForeignKey("house.id"), nullable=True)
+    casted = db.relationship("Cast", backref="character", lazy=True)
 
-    # class -> __repr__ harry =- Character()
-    # print(harry) -> <object #A984351ajsdfg >
-    # harry.serialize() -> { "id": 1, name: "Harry Potter", "gender": "male",
-    #  "is_alive": True }
     def __repr__(self):
-        # `Character ${variable}`
-        # Personaje:
+
         return f'Character {self.name}'
 
     def serialize(self):
@@ -53,4 +50,67 @@ class Character(db.Model):
             "gender": self.gender,
             "species": self.species,
             "is_alive": self.is_alive
+        }
+
+# Libros
+
+
+class House(db.Model):
+    __tablename__ = 'house'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+
+    characters = db.relationship('Character', backref='house', lazy=True)
+
+    def __repr__(self):
+        return f"<House {self.name}"
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+        }
+
+
+class Book(db.Model):
+    __tablename__ = 'book'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    # numero de orden
+    order = db.Column(db.Integer, unique=True, nullable=False)
+    release_date = db.Column(db.Date, unique=True, nullable=False)
+    cast_members = db.relationship("Cast", backref="book", lazy=True)
+
+    # Son los metodos de mi clase
+    def __repr__(self):
+        # Representacion visual
+        return f'Book {self.name}'
+
+    def serialize(self):
+        # Para formatear la informacion
+        return {
+            "id": self.id,
+            "name": self.name,
+            "order": self.order,
+            "release_date": self.release_date
+        }
+
+
+class Cast(db.Model):
+    __tablename__ = 'cast'
+    id = db.Column(db.Integer, primary_key=True)
+    character_id = db.Column(db.Integer, db.ForeignKey(
+        "character.id"), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey("book.id"), nullable=False)
+    # movie_id = db.Column(....)
+
+    def __repr__(self):
+        return f'Cast {self.id}'
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "character_id": self.character_id,
+            "book_id": self.book_id
         }

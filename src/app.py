@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User, Character
+from models import db, User, Character, Book, Cast
 # from models import Person
 
 app = Flask(__name__)
@@ -150,9 +150,141 @@ def delete_character_by_id(id):
         db.session.rollback()
         return error
 
+# CRUD de Libros
+# CRUD de cast
 
-# CRUD(Create, Read, Update, Delete)
-# this only runs if `$ python src/app.py` is executed
+
+# GET all
+@app.route('/books', methods=['GET'])
+def get_books():
+    books = Book.query.all()
+    serialized_books = [book.serialize() for book in books]
+    return jsonify(serialized_books), 200
+
+
+# GET by id
+@app.route('/book/<int:id>', methods=['GET'])
+def get_book_by_id(id):
+    current_book = Book.query.get(id)
+    if not current_book:
+        return jsonify({"error": "Book not found"}), 404
+    return jsonify(current_book.serialize()), 200
+
+
+# [POST] create book
+@app.route('/book', methods=['POST'])
+def create_book():
+    data = request.get_json()
+    name = data.get("name", None)
+    order = data.get("order", None)
+    release_date = data.get("release_date", None)
+
+    try:
+        new_book = Book(name=name, order=order, release_date=release_date)
+        db.session.add(new_book)
+        db.session.commit()
+        return jsonify(new_book.serialize()), 201
+
+    except Exception as error:
+        db.session.rollback()
+        return jsonify(error), 500
+
+
+# [DELETE] delete a book
+@app.route('/book/<int:id>', methods=['DELETE'])
+def delete_book_by_id(id):
+    book_to_delete = Book.query.get(id)
+
+    if not book_to_delete:
+        return jsonify({"error": "Book not found"}), 404
+
+    try:
+        db.session.delete(book_to_delete)
+        db.session.commit()
+        return jsonify("Book deleted successfully"), 200
+
+    except Exception as error:
+        db.session.rollback()
+        return error, 500
+
+
+# PUT
+@app.route('/book/<int:id>', methods=['PUT'])
+def update_book_by_id(id):
+    data = request.get_json()
+    name = data.get("name", None)
+    order = data.get("order", None)
+    release_date = data.get("release_date", None)
+
+    update_book = Book.query.get(id)
+    if not update_book:
+        return jsonify({"error": "Book not found"}), 404
+
+    try:
+        update_book.name = name
+        update_book.order = order
+        update_book.release_date = release_date
+        db.session.commit()
+        return jsonify({"book": update_book.serialize()}), 200
+
+    except Exception as error:
+        db.session.rollback()
+        return error, 500
+
+# CRUD CAST
+# [POST]
+
+
+@app.route('/cast/<int:book_id>/<int:character_id>', methods=['POST'])
+def create_cast(book_id, character_id):
+    # Verificar que esos IDS que me estan mandando sean reales
+    book_to_cast = Book.query.get(book_id)
+    character_to_cast = Character.query.get(character_id)
+
+    if not book_to_cast or not character_to_cast:
+        return jsonify({"error": "Book or character not found"}), 404
+
+    # EVITAR dos veces la misma instancia del cast
+    # filter_by
+    cast_exists = Cast.query.filter_by(
+        book_id=book_id, character_id=character_id).first()
+
+    if cast_exists:
+        return jsonify({"error": "Ya existe ese personaje en el libro"}), 400
+
+    cast = Cast(book_id=book_id, character_id=character_id)
+    try:
+        db.session.add(cast)
+        db.session.commit()
+        return jsonify({"cast member": cast.serialize()}), 201
+    except Exception as error:
+        db.session.rollback()
+        return error, 500
+
+# Que me traiga todos los personajes que salieron en un libro X
+# [GET]
+
+
+@app.route('/cast/book/<int:id>', methods=['GET'])
+def get_characters_from_book(id):
+    casts = Cast.query.filter_by(book_id=id).all()
+    if not casts:
+        return jsonify({"error": "No cast member found"}), 404
+
+    return jsonify({"cast": [cast.serialize() for cast in casts]})
+
+# Buscar los libros en que aparece un personaje
+
+
+@app.route('/cast/character/<int:id>', methods=['GET'])
+def get_books_from_character(id):
+    casts = Cast.query.filter_by(character_id=id).all()
+    if not casts:
+        return jsonify({"error": "No books for this character"}), 404
+
+    return jsonify({"books": [book.serialize() for book in casts]})
+
+
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=PORT, debug=False)
